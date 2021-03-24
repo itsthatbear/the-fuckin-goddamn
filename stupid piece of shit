@@ -1,0 +1,69 @@
+ internal static class Assets
+    {
+        // the assetbundle to load assets from
+        internal static AssetBundle mainAssetBundle;
+
+        // particle effects
+        internal static GameObject swordSwingEffect;
+        internal static GameObject swordHitImpactEffect;
+
+        internal static GameObject punchSwingEffect;
+        internal static GameObject punchImpactEffect;
+
+        internal static GameObject bombExplosionEffect;
+
+        internal static NetworkSoundEventDef swordHitSoundEvent;
+        internal static NetworkSoundEventDef punchHitSoundEvent;
+
+        // cache these and use to create our own materials
+        public static Shader hotpoo = Resources.Load<Shader>("Shaders/Deferred/HGStandard");
+        public static Material CuddlesMat;
+
+        internal static void PopulateAssets()
+        {
+            if (mainAssetBundle == null)
+            {
+                using (var assetStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("CuddlesMod.CuddlesThing"))
+                {
+                    mainAssetBundle = AssetBundle.LoadFromStream(assetStream);
+                    var provider = new AssetBundleResourcesProvider("@Cuddles", mainAssetBundle);
+                    ResourcesAPI.AddProvider(provider);
+                }
+            }
+
+            using (Stream manifestResourceStream2 = Assembly.GetExecutingAssembly().GetManifestResourceStream("CuddlesMod.CuddlesBank.bnk"))
+            {
+                byte[] array = new byte[manifestResourceStream2.Length];
+                manifestResourceStream2.Read(array, 0, array.Length);
+                SoundAPI.SoundBanks.Add(array);
+            }
+
+            swordHitSoundEvent = CreateNetworkSoundEventDef("CuddlesSwordHit");
+            punchHitSoundEvent = CreateNetworkSoundEventDef("CuddlesPunchHit");
+
+            bombExplosionEffect = LoadEffect("BombExplosionEffect", "");
+
+            ShakeEmitter shakeEmitter = bombExplosionEffect.AddComponent<ShakeEmitter>();
+            shakeEmitter.amplitudeTimeDecay = true;
+            shakeEmitter.duration = 0.5f;
+            shakeEmitter.radius = 200f;
+            shakeEmitter.scaleShakeRadiusWithLocalScale = false;
+
+            shakeEmitter.wave = new Wave
+            {
+                amplitude = 1f,
+                frequency = 40f,
+                cycleOffset = 0f
+            };
+
+            swordSwingEffect = Assets.LoadEffect("CuddlesSwordSwingEffect");
+            swordHitImpactEffect = Assets.LoadEffect("ImpactCuddlesSlash");
+
+            punchSwingEffect = Assets.LoadEffect("CuddlesFistSwingEffect");
+            //punchImpactEffect = Assets.LoadEffect("ImpactCuddlesPunch");
+            // on second thought my effect sucks so imma just clone loader's
+            punchImpactEffect = PrefabAPI.InstantiateClone(Resources.Load<GameObject>("Prefabs/Effects/OmniEffect/OmniImpactVFXLoader"), "ImpactCuddlesPunch");
+            punchImpactEffect.AddComponent<NetworkIdentity>();
+
+            EffectAPI.AddEffect(punchImpactEffect);
+        }
